@@ -4,3 +4,6 @@ __pycache__/
 
 # real test data
 *_test_data*
+
+# my scratch space commit message file
+/msg
