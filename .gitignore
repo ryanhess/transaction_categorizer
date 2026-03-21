@@ -1,3 +1,6 @@
 .DS_Store
 __pycache__/
 .venv/
+
+# real test data
+*_test_data*
