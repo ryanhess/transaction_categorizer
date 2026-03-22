@@ -12,7 +12,7 @@ git submodule update
 
 For changes to the training data, they can be made in place. In the training_data directory:
 1. Run the normal sequence of add-commit-push. 
-2. From the project root, run:
+2. To deploy with the updated training data, first run from project root:
 ```bash
 git add src/inference/cat/training_data
 git commit -m "update training data"
