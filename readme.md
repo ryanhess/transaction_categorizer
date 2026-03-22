@@ -17,3 +17,4 @@ For changes to the training data, they can be made in place. In the training_dat
 git add src/inference/cat/training_data
 git commit -m "update training data"
 ```
+`git add .` also works if this is part of a larger set of changes.
