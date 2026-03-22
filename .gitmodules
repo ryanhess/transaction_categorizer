@@ -1,0 +1,3 @@
+[submodule "src/inference/cat/training_data"]
+	path = src/inference/cat/training_data
+	url = https://github.com/ryanhess/private-transaction-data
