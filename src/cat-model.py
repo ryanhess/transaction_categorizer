@@ -1,7 +1,9 @@
 import pandas as pd
 import xgboost
 from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.preprocessing import LabelEncoder
+from scipy.sparse import hstack
 
 
 def clean_data(data):
@@ -9,21 +11,29 @@ def clean_data(data):
         "Transfer"
     )
 
-    payee_encoder = LabelEncoder()
-    data["Payee"] = payee_encoder.fit_transform(data["Payee"])
+    data["Payee"] = data["Payee"].fillna("")
+    data["Category Group/Category"] = data["Category Group/Category"].fillna(
+        "Uncategorized"
+    )
+    counts = data["Category Group/Category"].value_counts()
+    keep = counts[counts >= 10].index
+    data = data[data["Category Group/Category"].isin(keep)]
+
+    payee_vectorizer = TfidfVectorizer()
+    payee_features = payee_vectorizer.fit_transform(data["Payee"])
     data["Outflow"] = data["Outflow"].replace(r"[\$,]", "", regex=True).astype(float)
     data["Inflow"] = data["Inflow"].replace(r"[\$,]", "", regex=True).astype(float)
 
-    features = data[["Payee", "Outflow", "Inflow"]]
+    money_features = data[["Outflow", "Inflow"]].values
 
-    # label: Category Group/Category as ints
+    features = hstack([payee_features, money_features])
+
     label_encoder = LabelEncoder()
-    labels = label_encoder.fit_transform(data["Category Group/Category"])
+    labels = label_encoder.fit_transform(data["Category"])
 
     return features, labels
 
 
-# get the data from the ynab file
 raw = pd.read_csv("test_data/rh-ynab_test_data.csv")
 
 data, labels = clean_data(raw)
@@ -34,7 +44,8 @@ traindata, testdata, trainlabels, testlabels = train_test_split(
 )
 
 # Train
-model = xgboost.XGBClassifier()
+# Set num_class explicitly so XGBoost doesn't fail when train/test splits have different classes
+model = xgboost.XGBClassifier(num_class=len(set(labels)))
 model.fit(traindata, trainlabels)
 
 # Evaluate
