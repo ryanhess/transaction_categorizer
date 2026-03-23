@@ -1,2 +1,2 @@
-from cat.train import train
-from cat.predict import predict
+from .train import train
+from .predict import predict
