@@ -6,7 +6,7 @@ from sklearn.preprocessing import LabelEncoder
 from scipy.sparse import hstack
 
 
-def clean_data(data):
+def _clean_data(data):
     data.loc[data["Payee"].str.startswith("Transfer :"), "Category Group/Category"] = (
         "Transfer"
     )
@@ -36,7 +36,7 @@ def clean_data(data):
 
 raw = pd.read_csv("test_data/rh-ynab_test_data.csv")
 
-data, labels = clean_data(raw)
+data, labels = _clean_data(raw)
 
 # Split
 traindata, testdata, trainlabels, testlabels = train_test_split(
