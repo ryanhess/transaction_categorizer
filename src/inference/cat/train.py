@@ -36,7 +36,7 @@ def _clean_data_and_get_transformers(data):
     features = hstack([payee_features, money_features])
 
     label_encoder = LabelEncoder()
-    labels = label_encoder.fit_transform(data["Category"])
+    labels = label_encoder.fit_transform(data["Category Group/Category"])
 
     return features, labels, payee_vectorizer, label_encoder
 
