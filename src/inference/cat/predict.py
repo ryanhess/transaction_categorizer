@@ -1,4 +1,4 @@
-from models import TransactionRequest, TransactionResponse
+from src.models import TransactionRequest, TransactionResponse
 from .train import path_to_model_state
 import joblib
 import xgboost
