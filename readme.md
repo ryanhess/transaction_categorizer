@@ -38,3 +38,7 @@ It will also be tracked with:
     ```
 
 Followed by commit.
+
+### To Train the model:
+In the project root run:
+`python -c "from src.inference.cat.train import train; print(train())"`
