@@ -4,15 +4,7 @@
 
 ## Setup:
 1. Clone the repo
-2. Setup the training data submodule:
-    
-
-
-2. run the following command:
-
-    `git config submodule.recurse true`
-
-    This configures automatic updating of the working tree state of the training data submodule.
+2. `uv sync`
 
 ## Training Data
 private--not part of this repo. Instead, git points to the data as a submodule, which is its own repo. 
