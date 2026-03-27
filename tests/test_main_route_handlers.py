@@ -47,7 +47,9 @@ class TestCategorizeHandler:
         assert response.status_code == 422
 
     def test_passing_empty_list_returns_200_and_empty_list(self) -> None:
-        return
+        response = client.post("/categorize", json=[])
+
+        assert response.status_code == 200
 
     def test_passing_list_size_1_returns_200_and_list_size_1(self) -> None:
         return
