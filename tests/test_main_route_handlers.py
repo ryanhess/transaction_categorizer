@@ -1,7 +1,7 @@
 from pytest import fixture
 from fastapi.testclient import TestClient
 from transaction_categorizer.main import app, NO_MODEL_EXCEPTION
-from transaction_categorizer.models import TransactionRequest
+from transaction_categorizer.models import TransactionRequest, TransactionResponse
 
 
 client = TestClient(app)
@@ -52,4 +52,16 @@ class TestCategorizeHandler:
         assert response.status_code == 200
 
     def test_passing_list_size_1_returns_200_and_list_size_1(self) -> None:
-        return
+        transactions = [
+            TransactionRequest(id=1, payee="Trader Joe's", inflow=0, outflow=100.00)
+        ]
+
+        response = client.post(
+            "/categorize", json=[txn.model_dump() for txn in transactions]
+        )
+
+        response_body = response.json()
+
+        assert response.status_code == 200
+        assert isinstance(response_body, list)
+        assert len(response_body) == 1
