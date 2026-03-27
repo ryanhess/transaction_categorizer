@@ -1,3 +1,6 @@
+from transaction_categorizer.main import NO_MODEL_EXCEPTION
+
+
 class TestCategorizeHandler:
     def test_no_model_returns_503(self):
         return
