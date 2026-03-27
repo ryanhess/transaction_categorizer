@@ -4,6 +4,10 @@
 __pycache__/
 .venv/
 *.egg-info/
+.pytest_cache/
+
+# ruff
+.ruff_cache/
 
 # real test data
 *_test_data*

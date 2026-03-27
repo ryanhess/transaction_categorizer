@@ -9,8 +9,10 @@ from numpy.typing import ArrayLike
 from typing import cast
 
 
-path_to_training_data = "src/inference/cat/training_data/ynab-rh-txns.csv"
-path_to_model_state = "src/inference/cat/state/"
+path_to_training_data = (
+    "categorizer_service/inference/cat/training_data/ynab-rh-txns.csv"
+)
+path_to_model_state = "categorizer_service/inference/cat/state/"
 
 
 def _clean_data_and_get_transformers(

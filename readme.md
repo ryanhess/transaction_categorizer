@@ -30,13 +30,13 @@ For example, if you switched branches and the new branch points to a different c
 that commit will be automatically checked out while in that branch on the main repo.
 
 ### For changes to training data
-With terminal in the training_data directory `src/inference/cat/training_data`:
+With terminal in the training_data directory `categorizer_service/inference/cat/training_data`:
 1. Run the normal sequence of add-commit-push. This will be committing to the sub-repo that holds the data.
 2. The main repo will track the updated commit if you commit changes on the submodule's directory.
     Note: this only updates the pointer to the commit in submodule and doesnt track the contents in the main repo.
 
     ```bash
-    git add src/inference/cat/training_data
+    git add categorizer_service/inference/cat/training_data
     ```
 Or just add everything. The submodule pointer will be added too:
     
@@ -48,4 +48,4 @@ Followed by commit.
 
 ## To Train the model:
 In the project root run:
-`python -c "from src.inference.cat.train import train; print(train())"`
+`python -c "from categorizer_service.inference.cat.train import train; print(train())"`
