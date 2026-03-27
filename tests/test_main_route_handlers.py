@@ -28,7 +28,11 @@ class TestCategorizeHandler:
         assert response.json()["detail"] == NO_MODEL_EXCEPTION["detail"]
 
     def test_missing_id_returns_422(self) -> None:
-        return
+        transactions = [{"payee": "Trader Joe's", "inflow": 0, "outflow": 100.00}]
+
+        response = client.post("/categorize", json=transactions)
+
+        assert response.status_code == 422
 
     def test_missing_payee_returns_422(self) -> None:
         return
