@@ -11,3 +11,6 @@ class TestGetFeaturesFromData:
 class TestPredict:
     def test_returns_none_when_no_model(self) -> None:
         return
+
+    def test_returns_list_of_correct_type(self) -> None:
+        return
