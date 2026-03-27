@@ -9,20 +9,20 @@ from typing import cast
 # this loading is done at import time. Makes predictions fast and initial load simple.
 # Don't want to load for each prediction.
 try:
-    _model = XGBClassifier()
-    _model.load_model(path_to_model_state + "model.json")
-    _payee_vectorizer = joblib_load(str(path_to_model_state + "payee_vectorizer.pkl"))
-    _label_encoder = joblib_load(str(path_to_model_state + "category_encoder.pkl"))
-    model_is_trained = True
+    _MODEL = XGBClassifier()
+    _MODEL.load_model(path_to_model_state + "model.json")
+    _PAYEE_VECTORIZER = joblib_load(str(path_to_model_state + "payee_vectorizer.pkl"))
+    _LABEL_ENCODER = joblib_load(str(path_to_model_state + "category_encoder.pkl"))
+    MODEL_IS_TRAINED = True
 except (XGBoostError, FileNotFoundError):
-    model_is_trained = False
+    MODEL_IS_TRAINED = False
 
 
 def _get_features_from_data(txns: list[TransactionRequest]) -> coo_array | None:
     payees = [txn.payee for txn in txns]
-    if not model_is_trained:
+    if not MODEL_IS_TRAINED:
         return None
-    payee_feature = _payee_vectorizer.transform(payees)
+    payee_feature = _PAYEE_VECTORIZER.transform(payees)
     inflow_feature = csr_matrix([[txn.inflow] for txn in txns])
     outflow_feature = csr_matrix([[txn.outflow] for txn in txns])
 
@@ -33,11 +33,11 @@ def _get_features_from_data(txns: list[TransactionRequest]) -> coo_array | None:
 
 def predict(transactions: list[TransactionRequest]) -> list[TransactionResponse]:
     features = _get_features_from_data(transactions)
-    if not model_is_trained:
+    if not MODEL_IS_TRAINED:
         raise RuntimeError("Model not trained. Run train() first.")
-    predictions = _model.predict(features)
+    predictions = _MODEL.predict(features)
 
-    category_names: list[str] = _label_encoder.inverse_transform(predictions)
+    category_names: list[str] = _LABEL_ENCODER.inverse_transform(predictions)
 
     result: list[TransactionResponse] = []
     for i in range(len(transactions)):
