@@ -42,7 +42,9 @@ class TestCategorizeHandler:
         assert response.status_code == 422
 
     def test_passing_none_returns_422(self) -> None:
-        return
+        response = client.post("/categorize", json=None)
+
+        assert response.status_code == 422
 
     def test_passing_empty_list_returns_200_and_empty_list(self) -> None:
         return
