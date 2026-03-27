@@ -35,7 +35,11 @@ class TestCategorizeHandler:
         assert response.status_code == 422
 
     def test_missing_payee_returns_422(self) -> None:
-        return
+        transactions = [{"id": 20, "inflow": 0, "outflow": 100.00}]
+
+        response = client.post("/categorize", json=transactions)
+
+        assert response.status_code == 422
 
     def test_passing_none_returns_422(self) -> None:
         return
