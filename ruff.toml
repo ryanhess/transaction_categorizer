@@ -1,4 +1,4 @@
-extend-exclude = ["categorizer_service/inference/cat/training_data"]
+extend-exclude = ["transaction_categorizer/inference/cat/training_data"]
 
 [lint]
 # Added E501: ruff format does not fix long lines that are comments, string
