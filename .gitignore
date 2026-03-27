@@ -1,6 +1,9 @@
 .DS_Store
+
+# Python
 __pycache__/
 .venv/
+*.egg-info/
 
 # real test data
 *_test_data*
