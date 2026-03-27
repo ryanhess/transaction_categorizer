@@ -15,7 +15,7 @@ NO_MODEL_EXCEPTION = {
 @app.post(
     "/categorize",
     responses={
-        NO_MODEL_EXCEPTION["status_code"]: {"description": NO_MODEL_EXCEPTION["detail"]}
+        NO_MODEL_EXCEPTION["status_code"]: {"detail": NO_MODEL_EXCEPTION["detail"]}
     },
 )
 async def categorize_handler(
