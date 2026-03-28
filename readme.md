@@ -5,6 +5,11 @@
 ## Setup:
 1. Clone the repo
 2. `uv sync`
+3. Setup pre-commit scripts to run before commit:
+
+    ```bash
+    git config core.hooksPath .githooks
+    ```
 
 ## Training Data
 Training data is a separate private repo. The main repo contains a submodule, pointing to a selected commit in the training data repo.
