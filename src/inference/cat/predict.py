@@ -31,10 +31,11 @@ def _get_features_from_data(txns: list[TransactionRequest]) -> coo_array | None:
     return cast(coo_array, features)
 
 
-def predict(transactions: list[TransactionRequest]) -> list[TransactionResponse]:
+def predict(transactions: list[TransactionRequest]) -> list[TransactionResponse] | None:
     features = _get_features_from_data(transactions)
     if not MODEL_IS_TRAINED:
-        raise RuntimeError("Model not trained. Run train() first.")
+        print("Error: model state not found. Train model first.")
+        return None
     predictions = _MODEL.predict(features)
 
     category_names: list[str] = _LABEL_ENCODER.inverse_transform(predictions)
