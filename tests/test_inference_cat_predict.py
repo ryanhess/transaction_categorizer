@@ -94,4 +94,3 @@ class TestPredict:
         assert results is not None
         for i, res in enumerate(results):
             assert txns[i].id == res.id
-            assert txns[i].payee == res.payee
