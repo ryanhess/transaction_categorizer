@@ -1,21 +1,67 @@
-from transaction_categorizer.main import NO_MODEL_EXCEPTION
+from pytest import fixture
+from fastapi.testclient import TestClient
+from transaction_categorizer.main import app, NO_MODEL_EXCEPTION
+from transaction_categorizer.models import TransactionRequest, TransactionResponse
+
+
+client = TestClient(app)
+
+
+@fixture()
+def mock_predict(mocker) -> None:
+    return mocker.patch("transaction_categorizer.main.predict")
 
 
 class TestCategorizeHandler:
-    def test_no_model_returns_503(self):
-        return
+    def test_no_model_returns_503(self, mock_predict) -> None:
+        mock_predict.return_value = None
 
-    def test_missing_id_returns_422(self):
-        return
+        transactions = [
+            TransactionRequest(id=1, payee="Trader Joe's", inflow=0, outflow=100.00)
+        ]
 
-    def test_missing_payee_returns_422(self):
-        return
+        response = client.post(
+            "/categorize", json=[txn.model_dump() for txn in transactions]
+        )
 
-    def test_passing_none_returns_422(self):
-        return
+        assert response.status_code == 503
+        assert response.json()["detail"] == NO_MODEL_EXCEPTION["detail"]
 
-    def test_passing_empty_list_returns_200_and_empty_list(self):
-        return
+    def test_missing_id_returns_422(self) -> None:
+        transactions = [{"payee": "Trader Joe's", "inflow": 0, "outflow": 100.00}]
 
-    def test_passing_list_size_1_returns_200_and_list_size_1(self):
-        return
+        response = client.post("/categorize", json=transactions)
+
+        assert response.status_code == 422
+
+    def test_missing_payee_returns_422(self) -> None:
+        transactions = [{"id": 20, "inflow": 0, "outflow": 100.00}]
+
+        response = client.post("/categorize", json=transactions)
+
+        assert response.status_code == 422
+
+    def test_passing_none_returns_422(self) -> None:
+        response = client.post("/categorize", json=None)
+
+        assert response.status_code == 422
+
+    def test_passing_empty_list_returns_200_and_empty_list(self) -> None:
+        response = client.post("/categorize", json=[])
+
+        assert response.status_code == 200
+
+    def test_passing_list_size_1_returns_200_and_list_size_1(self) -> None:
+        transactions = [
+            TransactionRequest(id=1, payee="Trader Joe's", inflow=0, outflow=100.00)
+        ]
+
+        response = client.post(
+            "/categorize", json=[txn.model_dump() for txn in transactions]
+        )
+
+        response_body = response.json()
+
+        assert response.status_code == 200
+        assert isinstance(response_body, list)
+        assert len(response_body) == 1
