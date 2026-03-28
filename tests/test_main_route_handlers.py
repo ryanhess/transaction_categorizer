@@ -50,8 +50,17 @@ class TestCategorizeHandler:
         response = client.post("/categorize", json=[])
 
         assert response.status_code == 200
+        assert response.json() == []
 
-    def test_passing_list_size_1_returns_200_and_list_size_1(self) -> None:
+    def test_passing_list_size_1_returns_200_and_list_size_1(
+        self, mock_predict
+    ) -> None:
+        mock_predict_response = TransactionResponse(id=1, category="Groceries")
+
+        mock_predict.return_value = [
+            mock_predict_response,
+        ]
+
         transactions = [
             TransactionRequest(id=1, payee="Trader Joe's", inflow=0, outflow=100.00)
         ]

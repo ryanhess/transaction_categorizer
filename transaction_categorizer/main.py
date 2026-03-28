@@ -7,7 +7,7 @@ app = FastAPI()
 
 
 NO_MODEL_EXCEPTION = {
-    "status_code": 500,
+    "status_code": 503,
     "detail": "No trained model found on server.",
 }
 
@@ -21,6 +21,8 @@ NO_MODEL_EXCEPTION = {
 async def categorize_handler(
     txns: list[TransactionRequest],
 ) -> list[TransactionResponse]:
+    if txns == []:
+        return []
     result = predict(txns)
     if result is None:
         raise HTTPException(
