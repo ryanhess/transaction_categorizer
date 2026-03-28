@@ -1,4 +1,4 @@
-from src.models import TransactionRequest, TransactionResponse
+from transaction_categorizer.models import TransactionRequest, TransactionResponse
 from .train import path_to_model_state
 from joblib import load as joblib_load
 from xgboost import XGBClassifier

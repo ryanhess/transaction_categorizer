@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException
-from src.models import TransactionRequest, TransactionResponse
-from src.inference.cat import predict
+from transaction_categorizer.models import TransactionRequest, TransactionResponse
+from transaction_categorizer.inference.cat import predict
 
 
 app = FastAPI()

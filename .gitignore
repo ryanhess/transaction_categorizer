@@ -1,6 +1,14 @@
-.DS_Store
+# ignore all dot files/directories at the root level.
+/.* 
+
+!.gitignore
+!.githooks/
+!.vscode/
+!.python-version
+
+# Python
 __pycache__/
-.venv/
+*.egg-info/
 
 # real test data
 *_test_data*
