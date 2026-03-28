@@ -1,0 +1,6 @@
+extend-exclude = ["src/inference/cat/training_data"]
+
+[lint]
+# Added E501: ruff format does not fix long lines that are comments, string
+# literals, etc, this rule flags the lines
+extend-select = ["FAST", "ANN2", "E501"]

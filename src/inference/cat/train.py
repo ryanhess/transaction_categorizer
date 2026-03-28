@@ -3,15 +3,19 @@ import xgboost
 from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.preprocessing import LabelEncoder
-from scipy.sparse import hstack
+from scipy.sparse import hstack, coo_matrix
 from joblib import dump
+from numpy.typing import ArrayLike
+from typing import cast
 
 
 path_to_training_data = "src/inference/cat/training_data/ynab-rh-txns.csv"
 path_to_model_state = "src/inference/cat/state/"
 
 
-def _clean_data_and_get_transformers(data):
+def _clean_data_and_get_transformers(
+    data,
+) -> tuple[coo_matrix, ArrayLike, TfidfVectorizer, LabelEncoder]:
     # find rows where the payee starts with transfer, put Transfer in the category.
     data.loc[data["Payee"].str.startswith("Transfer :"), "Category Group/Category"] = (
         "Transfer"
@@ -32,13 +36,13 @@ def _clean_data_and_get_transformers(data):
 
     money_features = data[["Outflow", "Inflow"]].values
 
-    # arranges the payee features and money features as sets of columns, together one big matrix.
     features = hstack([payee_features, money_features])
+    features_matrix = cast(coo_matrix, features)
 
     label_encoder = LabelEncoder()
     labels = label_encoder.fit_transform(data["Category Group/Category"])
 
-    return features, labels, payee_vectorizer, label_encoder
+    return features_matrix, labels, payee_vectorizer, label_encoder
 
 
 def train() -> float:
