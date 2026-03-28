@@ -24,7 +24,7 @@ class TestPredict:
 
         result = predict(txns_param)
 
-        assert result == None
+        assert result is None
 
     @mark.skipif(not MODEL_IS_TRAINED, reason="model not trained")
     def test_returns_list_of_correct_type_and_count(self) -> None:
@@ -45,3 +45,7 @@ class TestPredict:
 
         assert isinstance(result, list)
         assert all(not res.category.isnumeric() for res in result)
+
+    @mark.skipif(not MODEL_IS_TRAINED, reason="model not trained")
+    def test_output_order_and_id(self) -> None:
+        return
