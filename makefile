@@ -7,4 +7,4 @@ clean:
 	find . -type d -name "*.ruff_cache" -exec rm -rf {} +
 
 train:
-	python -c "from transaction_categorizer.inference.cat.train import train; print(train())"
+	@python -c "from transaction_categorizer.inference.cat.train import train; print(train())"
