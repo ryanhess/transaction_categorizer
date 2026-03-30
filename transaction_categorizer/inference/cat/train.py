@@ -72,11 +72,9 @@ def train() -> float:
     return float(model.score(testdata, testlabels))
 
 
-def _tune_specific_params(
-    config: dict, data_sample_fraction: float = 0.05, params_to_tune: dict = {}
-) -> None:
+def _tune_specific_params(config: dict, params_to_tune: dict = {}) -> None:
     raw = pd.read_csv(path_to_training_data)
-    raw = raw.sample(frac=data_sample_fraction, random_state=42)
+    raw = raw.sample(frac=config["data_sample_fraction"], random_state=42)
 
     data, labels, payee_vectorizer, label_encoder = _clean_data_and_get_transformers(
         raw
@@ -108,7 +106,7 @@ def _tune_specific_params(
         json.dump(new_params_dict, f, indent=2)
 
 
-def tune(data_sample_fraction: float = 0.05) -> None:
+def tune() -> None:
     # fmt: off
     param_tuning_sequence = [
         {
@@ -133,9 +131,10 @@ def tune(data_sample_fraction: float = 0.05) -> None:
     # fmt: on
 
     config = {
-        "n_trials": 50,
+        "n_trials": 20,
         "n_jobs": -1,
+        "data_sample_fraction": 0.5,
     }
 
     for group in param_tuning_sequence:
-        _tune_specific_params(config, data_sample_fraction, group)
+        _tune_specific_params(config, group)
