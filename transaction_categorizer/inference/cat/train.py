@@ -46,42 +46,52 @@ def _clean_data_in_place(csvdata) -> pd.DataFrame:
     return csvdata
 
 
+def _get_transformers(
+    cleaned_data: pd.DataFrame,
+) -> tuple[TfidfVectorizer, LabelEncoder]:
+    payee_vectorizer = TfidfVectorizer()
+    payee_vectorizer.fit(cleaned_data["Payee"])
+
+    label_encoder = LabelEncoder()
+    label_encoder.fit(cleaned_data["Category Group/Category"])
+
+    return payee_vectorizer, label_encoder
+
+
 def _clean_data_and_get_transformers(
     data,
 ) -> tuple[coo_matrix, ArrayLike, TfidfVectorizer, LabelEncoder]:
     # find rows where the payee starts with transfer, put Transfer in the category.
     data.loc[
         data["Payee"].str.startswith("Transfer :"), "Category Group/Category"
-    ] = (  # Extracted
-        "Transfer"  # Extracted
-    )  # Extracted
-    # Extracted
-    data["Payee"] = data["Payee"].fillna("")  # Extracted
-    data["Category Group/Category"] = data[
-        "Category Group/Category"
-    ].fillna(  # Extracted
-        "Uncategorized"  # Extracted
-    )  # Extracted
-    counts = data["Category Group/Category"].value_counts()  # Extracted
-    keep = counts[counts >= 2].index  # Extracted
-    data = data[data["Category Group/Category"].isin(keep)]  # Extracted
+    ] = (  # Ex1
+        "Transfer"  # Ex1
+    )  # Ex1
+    # Ex1
+    data["Payee"] = data["Payee"].fillna("")  # Ex1
+    data["Category Group/Category"] = data["Category Group/Category"].fillna(  # Ex1
+        "Uncategorized"  # Ex1
+    )  # Ex1
+    counts = data["Category Group/Category"].value_counts()  # Ex1
+    keep = counts[counts >= 2].index  # Ex1
+    data = data[data["Category Group/Category"].isin(keep)]  # Ex1
 
-    payee_vectorizer = TfidfVectorizer()
-    payee_features = payee_vectorizer.fit_transform(data["Payee"])
+    payee_vectorizer = TfidfVectorizer()  # Ex2
+    payee_features = payee_vectorizer.fit_transform(data["Payee"])  # Ex2
     data["Outflow"] = (
         data["Outflow"].replace(r"[\$,]", "", regex=True).astype(float)
-    )  # Extracted
+    )  # Ex1
     data["Inflow"] = (
         data["Inflow"].replace(r"[\$,]", "", regex=True).astype(float)
-    )  # Extracted
+    )  # Ex1
 
     money_features = data[["Outflow", "Inflow"]].values
 
     features = hstack([payee_features, money_features])
     features_matrix = cast(coo_matrix, features)
 
-    label_encoder = LabelEncoder()
-    labels = label_encoder.fit_transform(data["Category Group/Category"])
+    label_encoder = LabelEncoder()  # Ex2
+    labels = label_encoder.fit_transform(data["Category Group/Category"])  # Ex2
 
     return features_matrix, labels, payee_vectorizer, label_encoder
 
