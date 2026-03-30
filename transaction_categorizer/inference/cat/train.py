@@ -64,6 +64,16 @@ def _get_transformers(
     return payee_vectorizer, label_encoder
 
 
+def _store_model(
+    model: xgboost.XGBModel, transformers: tuple[TfidfVectorizer, LabelEncoder]
+) -> None:
+    payee_vectorizer, label_encoder = transformers
+
+    model.save_model(model_filepath)
+    dump(payee_vectorizer, payee_vectorizer_filepath)
+    dump(label_encoder, label_encoder_filepath)
+
+
 def _clean_data_and_get_transformers(
     data,
 ) -> tuple[coo_matrix, ArrayLike, TfidfVectorizer, LabelEncoder]:
