@@ -10,13 +10,13 @@ from typing import cast
 import optuna
 import json
 from pathlib import Path
-
-
-path_to_training_data = (
-    "transaction_categorizer/inference/cat/training_data/ynab-rh-txns.csv"
+from .paths import (
+    training_data_filepath,
+    training_params_filepath,
+    model_filepath,
+    payee_vectorizer_filepath,
+    label_encoder_filepath,
 )
-path_to_model_state = "transaction_categorizer/inference/cat/state/"
-path_to_hyperparams = "transaction_categorizer/inference/cat/state/hyperparams.json"
 
 
 def _clean_data_and_get_transformers(
@@ -52,8 +52,8 @@ def _clean_data_and_get_transformers(
 
 
 def train() -> float:
-    raw = pd.read_csv(path_to_training_data)
-    params_path = Path(path_to_hyperparams)
+    raw = pd.read_csv(training_data_filepath)
+    params_path = Path(training_params_filepath)
     if params_path.exists():
         params = json.loads(params_path.read_text())
     else:
@@ -70,15 +70,15 @@ def train() -> float:
     model = xgboost.XGBClassifier(**params)
     model.fit(traindata, trainlabels)
 
-    model.save_model(path_to_model_state + "model.json")
-    dump(payee_vectorizer, path_to_model_state + "payee_vectorizer.pkl")
-    dump(label_encoder, path_to_model_state + "category_encoder.pkl")
+    model.save_model(model_filepath)
+    dump(payee_vectorizer, payee_vectorizer_filepath)
+    dump(label_encoder, label_encoder_filepath)
 
     return float(model.score(testdata, testlabels))
 
 
 def _tune_specific_params(config: dict, params_to_tune: dict = {}) -> None:
-    raw = pd.read_csv(path_to_training_data)
+    raw = pd.read_csv(training_data_filepath)
     raw = raw.sample(frac=config["data_sample_fraction"], random_state=42)
 
     data, labels, payee_vectorizer, label_encoder = _clean_data_and_get_transformers(
@@ -89,7 +89,7 @@ def _tune_specific_params(config: dict, params_to_tune: dict = {}) -> None:
         data, labels, test_size=0.2, stratify=labels
     )
 
-    path = Path(path_to_hyperparams)
+    path = Path(training_params_filepath)
     if path.exists():
         current_params = json.loads(path.read_text())
     else:
@@ -107,7 +107,7 @@ def _tune_specific_params(config: dict, params_to_tune: dict = {}) -> None:
 
     new_params_dict = current_params | study.best_params
 
-    with open(path_to_hyperparams, "w") as f:
+    with open(training_params_filepath, "w") as f:
         json.dump(new_params_dict, f, indent=2)
 
 

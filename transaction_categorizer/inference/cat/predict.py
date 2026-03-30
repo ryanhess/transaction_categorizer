@@ -1,5 +1,5 @@
 from transaction_categorizer.models import TransactionRequest, TransactionResponse
-from .train import path_to_model_state
+from .paths import model_filepath, payee_vectorizer_filepath, label_encoder_filepath
 from joblib import load as joblib_load
 from xgboost import XGBClassifier
 from xgboost.core import XGBoostError
@@ -10,9 +10,9 @@ from typing import cast
 # Don't want to load for each prediction.
 try:
     _MODEL = XGBClassifier()
-    _MODEL.load_model(path_to_model_state + "model.json")
-    _PAYEE_VECTORIZER = joblib_load(str(path_to_model_state + "payee_vectorizer.pkl"))
-    _LABEL_ENCODER = joblib_load(str(path_to_model_state + "category_encoder.pkl"))
+    _MODEL.load_model(model_filepath)
+    _PAYEE_VECTORIZER = joblib_load(str(payee_vectorizer_filepath))
+    _LABEL_ENCODER = joblib_load(str(label_encoder_filepath))
     MODEL_IS_TRAINED = True
 except (XGBoostError, FileNotFoundError):
     MODEL_IS_TRAINED = False
