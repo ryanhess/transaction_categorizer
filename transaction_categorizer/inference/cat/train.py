@@ -7,6 +7,8 @@ from scipy.sparse import hstack, coo_matrix
 from joblib import dump
 from numpy.typing import ArrayLike
 from typing import cast
+import optuna
+import json
 
 
 path_to_training_data = (
@@ -66,3 +68,35 @@ def train() -> float:
     dump(label_encoder, path_to_model_state + "category_encoder.pkl")
 
     return float(model.score(testdata, testlabels))
+
+
+def tune() -> None:
+    raw = pd.read_csv(path_to_training_data)
+    raw = raw.sample(frac=0.05, random_state=42)
+
+    data, labels, payee_vectorizer, label_encoder = _clean_data_and_get_transformers(
+        raw
+    )
+
+    traindata, testdata, trainlabels, testlabels = train_test_split(
+        data, labels, test_size=0.2, stratify=labels
+    )
+
+    def objective(trial) -> float:
+        params = {
+            "n_estimators": trial.suggest_int("n_estimators", 100, 1000),
+            "max_depth": trial.suggest_int("max_depth", 2, 8),
+            "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.3, log=True),
+            "min_child_weight": trial.suggest_int("min_child_weight", 1, 20),
+            "subsample": trial.suggest_float("subsample", 0.5, 1.0),
+            "colsample_bytree": trial.suggest_float("colsample_bytree", 0.2, 1.0),
+        }
+        model = xgboost.XGBClassifier(**params)
+        model.fit(traindata, trainlabels)
+        return float(model.score(testdata, testlabels))
+
+    study = optuna.create_study(direction="maximize")
+    study.optimize(objective, n_trials=100)  # type: ignore
+
+    with open(path_to_model_state + "best_params.json", "w") as f:
+        json.dump(study.best_params, f, indent=2)
