@@ -19,8 +19,9 @@ from .paths import (
 )
 
 
-def _read_csv_training_data() -> pd.DataFrame:
+def _read_csv_training_data(sample_frac: float) -> pd.DataFrame:
     raw = pd.read_csv(training_data_filepath)
+    raw = raw.sample(frac=sample_frac, random_state=42)
     return raw
 
 
@@ -110,8 +111,13 @@ def _transform_data(
     return features_matrix, labels
 
 
-def train() -> float:
-    raw_data = _read_csv_training_data()
+def train(new_params: dict = {}, sample_frac: float = 1) -> float:
+    if new_params == {}:
+        production = True
+    else:
+        production = False
+
+    raw_data = _read_csv_training_data(sample_frac)
     cleaned_data = _clean_data_in_place(raw_data)
     transformers = _get_transformers(cleaned_data)
     features, labels = _transform_data(cleaned_data, transformers)
@@ -120,26 +126,32 @@ def train() -> float:
         features, labels, test_size=0.2, stratify=labels
     )
 
-    params_path = Path(training_params_filepath)
-    if params_path.exists():
-        params = json.loads(params_path.read_text())
+    stored_params_path = Path(training_params_filepath)
+    if stored_params_path.exists():
+        stored_params = json.loads(stored_params_path.read_text())
     else:
-        params = {}
+        stored_params = {}
 
-    model = xgboost.XGBClassifier(**params)
+    if production:
+        final_params = stored_params
+    else:
+        final_params = stored_params | new_params
+
+    model = xgboost.XGBClassifier(**final_params)
     model.fit(traindata, trainlabels)
 
-    payee_vectorizer, label_encoder = transformers
+    if production:
+        payee_vectorizer, label_encoder = transformers
 
-    model.save_model(model_filepath)
-    dump(payee_vectorizer, payee_vectorizer_filepath)
-    dump(label_encoder, label_encoder_filepath)
+        model.save_model(model_filepath)
+        dump(payee_vectorizer, payee_vectorizer_filepath)
+        dump(label_encoder, label_encoder_filepath)
 
     return float(model.score(testdata, testlabels))
 
 
 def _tune_specific_params(config: dict, params_to_tune: dict = {}) -> None:
-    raw_data = _read_csv_training_data()
+    raw_data = _read_csv_training_data(config["data_sample_fraction"])
     cleaned_data = _clean_data_in_place(raw_data)
     transformers = _get_transformers(cleaned_data)
     features, labels = _transform_data(cleaned_data, transformers)
