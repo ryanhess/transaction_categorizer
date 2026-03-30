@@ -151,11 +151,7 @@ def train(new_params: dict = {}, sample_frac: float = 1) -> float:
     model.fit(traindata, trainlabels)
 
     if production:
-        payee_vectorizer, label_encoder = transformers
-
-        model.save_model(model_filepath)
-        dump(payee_vectorizer, payee_vectorizer_filepath)
-        dump(label_encoder, label_encoder_filepath)
+        _store_model(model, transformers)
 
     return float(model.score(testdata, testlabels))
 
