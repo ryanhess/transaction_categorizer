@@ -1,3 +1,12 @@
+"""
+train.py
+Encompasses two workflows:
+    - training the model on data to instantiate a production-ready model
+    - tuning the training parameters using progressive non-persistent training
+    and `optuna` to automate the trials. The product of this flow is the persistent
+    storage of training params used by the `train()` workflow
+"""
+
 import pandas as pd
 import xgboost
 from sklearn.model_selection import train_test_split
@@ -17,6 +26,37 @@ from .paths import (
     payee_vectorizer_filepath,
     label_encoder_filepath,
 )
+
+
+# fmt: off
+PARAM_TUNING_SEQUENCE = [
+    {
+        "n_estimators": lambda trial:
+            trial.suggest_int("n_estimators", 100, 1000),
+        "learning_rate": lambda trial:
+            trial.suggest_float("learning_rate", 0.01, 0.3, log=True),
+    },
+    {
+        "min_child_weight": lambda trial:
+            trial.suggest_int("min_child_weight", 1, 20),
+        "max_depth": lambda trial:
+            trial.suggest_int("max_depth", 2, 8),
+    },
+    {
+        "subsample": lambda trial:
+            trial.suggest_float("subsample", 0.5, 1.0),
+        "colsample_bytree": lambda trial:
+            trial.suggest_float("colsample_bytree", 0.2, 1.0),
+    },
+]
+# fmt: on
+
+
+TUNING_CONFIG = {
+    "n_trials": 20,
+    "n_jobs": -1,
+    "data_sample_fraction": 0.5,
+}
 
 
 def _read_csv_training_data(sample_frac: float) -> pd.DataFrame:
@@ -158,34 +198,5 @@ def _tune_specific_params(config: dict, params_to_tune: dict = {}) -> None:
 
 
 def tune() -> None:
-    # fmt: off
-    param_tuning_sequence = [
-        {
-            "n_estimators": lambda trial:
-                trial.suggest_int("n_estimators", 100, 1000),
-            "learning_rate": lambda trial:
-                trial.suggest_float("learning_rate", 0.01, 0.3, log=True),
-        },
-        {
-            "min_child_weight": lambda trial:
-                trial.suggest_int("min_child_weight", 1, 20),
-            "max_depth": lambda trial:
-                trial.suggest_int("max_depth", 2, 8),
-        },
-        {
-            "subsample": lambda trial:
-                trial.suggest_float("subsample", 0.5, 1.0),
-            "colsample_bytree": lambda trial:
-                trial.suggest_float("colsample_bytree", 0.2, 1.0),
-        },
-    ]
-    # fmt: on
-
-    config = {
-        "n_trials": 20,
-        "n_jobs": -1,
-        "data_sample_fraction": 0.5,
-    }
-
-    for group in param_tuning_sequence:
-        _tune_specific_params(config, group)
+    for group in PARAM_TUNING_SEQUENCE:
+        _tune_specific_params(TUNING_CONFIG, group)
