@@ -10,13 +10,57 @@ from typing import cast
 import optuna
 import json
 from pathlib import Path
-
-
-path_to_training_data = (
-    "transaction_categorizer/inference/cat/training_data/ynab-rh-txns.csv"
+from .paths import (
+    training_data_filepath,
+    training_params_filepath,
+    model_filepath,
+    payee_vectorizer_filepath,
+    label_encoder_filepath,
 )
-path_to_model_state = "transaction_categorizer/inference/cat/state/"
-path_to_hyperparams = "transaction_categorizer/inference/cat/state/hyperparams.json"
+
+
+def _read_csv_training_data() -> pd.DataFrame:
+    raw = pd.read_csv(training_data_filepath)
+    return raw
+
+
+def _clean_data_in_place(csvdata) -> pd.DataFrame:
+    """
+    Cleans the data, modifying the argument.
+    Returns a reference to the cleaned data as a convenience
+    """
+    # find rows where the payee starts with transfer, put Transfer in the category.
+    csvdata.loc[
+        csvdata["Payee"].str.startswith("Transfer :"), "Category Group/Category"
+    ] = "Transfer"
+
+    csvdata["Payee"] = csvdata["Payee"].fillna("")
+    csvdata["Category Group/Category"] = csvdata["Category Group/Category"].fillna(
+        "Uncategorized"
+    )
+    counts = csvdata["Category Group/Category"].value_counts()
+    keep = counts[counts >= 2].index
+    csvdata = csvdata[csvdata["Category Group/Category"].isin(keep)]
+    csvdata["Outflow"] = (
+        csvdata["Outflow"].replace(r"[\$,]", "", regex=True).astype(float)
+    )
+    csvdata["Inflow"] = (
+        csvdata["Inflow"].replace(r"[\$,]", "", regex=True).astype(float)
+    )
+
+    return csvdata
+
+
+def _get_transformers(
+    cleaned_data: pd.DataFrame,
+) -> tuple[TfidfVectorizer, LabelEncoder]:
+    payee_vectorizer = TfidfVectorizer()
+    payee_vectorizer.fit(cleaned_data["Payee"])
+
+    label_encoder = LabelEncoder()
+    label_encoder.fit(cleaned_data["Category Group/Category"])
+
+    return payee_vectorizer, label_encoder
 
 
 def _clean_data_and_get_transformers(
@@ -51,45 +95,60 @@ def _clean_data_and_get_transformers(
     return features_matrix, labels, payee_vectorizer, label_encoder
 
 
+def _transform_data(
+    data: pd.DataFrame, transformers: tuple
+) -> tuple[coo_matrix, ArrayLike]:
+    payee_vectorizer, label_encoder = transformers
+    payee_features = payee_vectorizer.transform(data["Payee"])
+    money_features = data[["Outflow", "Inflow"]].values
+
+    features = hstack([payee_features, money_features])
+    features_matrix = cast(coo_matrix, features)
+
+    labels = label_encoder.transform(data["Category Group/Category"])
+
+    return features_matrix, labels
+
+
 def train() -> float:
-    raw = pd.read_csv(path_to_training_data)
-    params_path = Path(path_to_hyperparams)
+    raw_data = _read_csv_training_data()
+    cleaned_data = _clean_data_in_place(raw_data)
+    transformers = _get_transformers(cleaned_data)
+    features, labels = _transform_data(cleaned_data, transformers)
+
+    traindata, testdata, trainlabels, testlabels = train_test_split(
+        features, labels, test_size=0.2, stratify=labels
+    )
+
+    params_path = Path(training_params_filepath)
     if params_path.exists():
         params = json.loads(params_path.read_text())
     else:
         params = {}
 
-    data, labels, payee_vectorizer, label_encoder = _clean_data_and_get_transformers(
-        raw
-    )
-
-    traindata, testdata, trainlabels, testlabels = train_test_split(
-        data, labels, test_size=0.2, stratify=labels
-    )
-
     model = xgboost.XGBClassifier(**params)
     model.fit(traindata, trainlabels)
 
-    model.save_model(path_to_model_state + "model.json")
-    dump(payee_vectorizer, path_to_model_state + "payee_vectorizer.pkl")
-    dump(label_encoder, path_to_model_state + "category_encoder.pkl")
+    payee_vectorizer, label_encoder = transformers
+
+    model.save_model(model_filepath)
+    dump(payee_vectorizer, payee_vectorizer_filepath)
+    dump(label_encoder, label_encoder_filepath)
 
     return float(model.score(testdata, testlabels))
 
 
 def _tune_specific_params(config: dict, params_to_tune: dict = {}) -> None:
-    raw = pd.read_csv(path_to_training_data)
-    raw = raw.sample(frac=config["data_sample_fraction"], random_state=42)
-
-    data, labels, payee_vectorizer, label_encoder = _clean_data_and_get_transformers(
-        raw
-    )
+    raw_data = _read_csv_training_data()
+    cleaned_data = _clean_data_in_place(raw_data)
+    transformers = _get_transformers(cleaned_data)
+    features, labels = _transform_data(cleaned_data, transformers)
 
     traindata, testdata, trainlabels, testlabels = train_test_split(
-        data, labels, test_size=0.2, stratify=labels
+        features, labels, test_size=0.2, stratify=labels
     )
 
-    path = Path(path_to_hyperparams)
+    path = Path(training_params_filepath)
     if path.exists():
         current_params = json.loads(path.read_text())
     else:
@@ -107,7 +166,7 @@ def _tune_specific_params(config: dict, params_to_tune: dict = {}) -> None:
 
     new_params_dict = current_params | study.best_params
 
-    with open(path_to_hyperparams, "w") as f:
+    with open(training_params_filepath, "w") as f:
         json.dump(new_params_dict, f, indent=2)
 
 
