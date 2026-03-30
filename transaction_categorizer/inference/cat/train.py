@@ -136,11 +136,7 @@ def _write_new_params_to_file(new_params: dict) -> None:
     Writes the new parameters to the file, updating
     existing keys with new and writing new keys fresh.
     """
-    stored_params_path = Path(training_params_filepath)
-    if stored_params_path.exists():
-        stored_params = json.loads(stored_params_path.read_text())
-    else:
-        stored_params = {}
+    stored_params = _read_params_from_file()
 
     all_params = stored_params | new_params
 
@@ -163,11 +159,7 @@ def train(new_params: dict = {}, sample_frac: float = 1) -> float:
         features, labels, test_size=0.2, stratify=labels
     )
 
-    stored_params_path = Path(training_params_filepath)
-    if stored_params_path.exists():
-        stored_params = json.loads(stored_params_path.read_text())
-    else:
-        stored_params = {}
+    stored_params = _read_params_from_file()
 
     if production:
         final_params = stored_params
