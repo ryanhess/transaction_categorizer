@@ -6,7 +6,7 @@ from sklearn.preprocessing import LabelEncoder
 from scipy.sparse import hstack, coo_matrix
 from joblib import dump
 from numpy.typing import ArrayLike
-from typing import cast
+from typing import Any, Callable, cast
 import optuna
 import json
 from pathlib import Path
@@ -119,6 +119,16 @@ def _transform_data(
     labels = label_encoder.transform(data["Category Group/Category"])
 
     return features_matrix, labels
+
+
+def _read_params_from_file() -> dict[str, Callable[[optuna.Trial], Any]]:
+    stored_params_path = Path(training_params_filepath)
+    if stored_params_path.exists():
+        stored_params = json.loads(stored_params_path.read_text())
+    else:
+        stored_params = {}
+
+    return stored_params
 
 
 def _write_new_params_to_file(new_params: dict) -> None:
