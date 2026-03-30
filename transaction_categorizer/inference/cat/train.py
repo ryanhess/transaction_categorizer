@@ -70,9 +70,9 @@ def train() -> float:
     return float(model.score(testdata, testlabels))
 
 
-def tune() -> None:
+def tune(data_sample_fraction: float = 0.05) -> None:
     raw = pd.read_csv(path_to_training_data)
-    raw = raw.sample(frac=0.05, random_state=42)
+    raw = raw.sample(frac=data_sample_fraction, random_state=42)
 
     data, labels, payee_vectorizer, label_encoder = _clean_data_and_get_transformers(
         raw
