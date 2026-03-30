@@ -72,7 +72,9 @@ def train() -> float:
     return float(model.score(testdata, testlabels))
 
 
-def tune(data_sample_fraction: float = 0.05) -> None:
+def _tune_specific_params(
+    data_sample_fraction: float = 0.05, params_to_tune: dict = {}
+) -> None:
     raw = pd.read_csv(path_to_training_data)
     raw = raw.sample(frac=data_sample_fraction, random_state=42)
 
@@ -91,16 +93,8 @@ def tune(data_sample_fraction: float = 0.05) -> None:
         current_params = {}
 
     def objective(trial) -> float:
-        new_params = {
-            "n_estimators": trial.suggest_int("n_estimators", 100, 1000),
-            "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.3, log=True),
-            # "min_child_weight": trial.suggest_int("min_child_weight", 1, 20),
-            # "max_depth": trial.suggest_int("max_depth", 2, 8),
-            # "subsample": trial.suggest_float("subsample", 0.5, 1.0),
-            # "colsample_bytree": trial.suggest_float("colsample_bytree", 0.2, 1.0),
-        }
+        new_params = {k: v(trial) for k, v in params_to_tune.items()}
         study_params = current_params | new_params
-        print(study_params)
         model = xgboost.XGBClassifier(**study_params)
         model.fit(traindata, trainlabels)
         return float(model.score(testdata, testlabels))
