@@ -6,7 +6,7 @@ from sklearn.preprocessing import LabelEncoder
 from scipy.sparse import hstack, coo_matrix
 from joblib import dump
 from numpy.typing import ArrayLike
-from typing import cast
+from typing import cast, Any
 import optuna
 import json
 from pathlib import Path
@@ -17,6 +17,11 @@ from .paths import (
     payee_vectorizer_filepath,
     label_encoder_filepath,
 )
+
+
+def _read_csv_training_data() -> pd.DataFrame:
+    raw = pd.read_csv(training_data_filepath)
+    return raw
 
 
 def _clean_data_in_place(csvdata) -> pd.DataFrame:
@@ -62,58 +67,69 @@ def _clean_data_and_get_transformers(
     data,
 ) -> tuple[coo_matrix, ArrayLike, TfidfVectorizer, LabelEncoder]:
     # find rows where the payee starts with transfer, put Transfer in the category.
-    data.loc[
-        data["Payee"].str.startswith("Transfer :"), "Category Group/Category"
-    ] = (  # Ex1
-        "Transfer"  # Ex1
-    )  # Ex1
-    # Ex1
-    data["Payee"] = data["Payee"].fillna("")  # Ex1
-    data["Category Group/Category"] = data["Category Group/Category"].fillna(  # Ex1
-        "Uncategorized"  # Ex1
-    )  # Ex1
-    counts = data["Category Group/Category"].value_counts()  # Ex1
-    keep = counts[counts >= 2].index  # Ex1
-    data = data[data["Category Group/Category"].isin(keep)]  # Ex1
+    data.loc[data["Payee"].str.startswith("Transfer :"), "Category Group/Category"] = (
+        "Transfer"
+    )
 
-    payee_vectorizer = TfidfVectorizer()  # Ex2
-    payee_features = payee_vectorizer.fit_transform(data["Payee"])  # Ex2
-    data["Outflow"] = (
-        data["Outflow"].replace(r"[\$,]", "", regex=True).astype(float)
-    )  # Ex1
-    data["Inflow"] = (
-        data["Inflow"].replace(r"[\$,]", "", regex=True).astype(float)
-    )  # Ex1
+    data["Payee"] = data["Payee"].fillna("")
+    data["Category Group/Category"] = data["Category Group/Category"].fillna(
+        "Uncategorized"
+    )
+    counts = data["Category Group/Category"].value_counts()
+    keep = counts[counts >= 2].index
+    data = data[data["Category Group/Category"].isin(keep)]
+
+    payee_vectorizer = TfidfVectorizer()
+    payee_features = payee_vectorizer.fit_transform(data["Payee"])
+    data["Outflow"] = data["Outflow"].replace(r"[\$,]", "", regex=True).astype(float)
+    data["Inflow"] = data["Inflow"].replace(r"[\$,]", "", regex=True).astype(float)
 
     money_features = data[["Outflow", "Inflow"]].values
 
     features = hstack([payee_features, money_features])
     features_matrix = cast(coo_matrix, features)
 
-    label_encoder = LabelEncoder()  # Ex2
-    labels = label_encoder.fit_transform(data["Category Group/Category"])  # Ex2
+    label_encoder = LabelEncoder()
+    labels = label_encoder.fit_transform(data["Category Group/Category"])
 
     return features_matrix, labels, payee_vectorizer, label_encoder
 
 
+def _transform_data(
+    data: pd.DataFrame, transformers: tuple
+) -> tuple[coo_matrix, ArrayLike]:
+    payee_vectorizer, label_encoder = transformers
+    payee_features = payee_vectorizer.transform(data["Payee"])
+    money_features = data[["Outflow", "Inflow"]].values
+
+    features = hstack([payee_features, money_features])
+    features_matrix = cast(coo_matrix, features)
+
+    labels = label_encoder.transform(data["Category Group/Category"])
+
+    return features_matrix, labels
+
+
 def train() -> float:
-    raw = pd.read_csv(training_data_filepath)
+    raw_data = _read_csv_training_data()
+    cleaned_data = _clean_data_in_place(raw_data)
+    transformers = _get_transformers(cleaned_data)
+    features, labels = _transform_data(cleaned_data, transformers)
+
     params_path = Path(training_params_filepath)
     if params_path.exists():
         params = json.loads(params_path.read_text())
     else:
         params = {}
 
-    data, labels, payee_vectorizer, label_encoder = _clean_data_and_get_transformers(
-        raw
-    )
-
     traindata, testdata, trainlabels, testlabels = train_test_split(
-        data, labels, test_size=0.2, stratify=labels
+        features, labels, test_size=0.2, stratify=labels
     )
 
     model = xgboost.XGBClassifier(**params)
     model.fit(traindata, trainlabels)
+
+    payee_vectorizer, label_encoder = transformers
 
     model.save_model(model_filepath)
     dump(payee_vectorizer, payee_vectorizer_filepath)
