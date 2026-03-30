@@ -121,6 +121,23 @@ def _transform_data(
     return features_matrix, labels
 
 
+def _write_new_params_to_file(new_params: dict) -> None:
+    """
+    Writes the new parameters to the file, updating
+    existing keys with new and writing new keys fresh.
+    """
+    stored_params_path = Path(training_params_filepath)
+    if stored_params_path.exists():
+        stored_params = json.loads(stored_params_path.read_text())
+    else:
+        stored_params = {}
+
+    all_params = stored_params | new_params
+
+    with open(training_params_filepath, "w") as f:
+        json.dump(all_params, f, indent=2)
+
+
 def train(new_params: dict = {}, sample_frac: float = 1) -> float:
     if new_params == {}:
         production = True
@@ -157,35 +174,17 @@ def train(new_params: dict = {}, sample_frac: float = 1) -> float:
 
 
 def _tune_specific_params(config: dict, params_to_tune: dict = {}) -> None:
-    raw_data = _read_csv_training_data(config["data_sample_fraction"])
-    cleaned_data = _clean_data_in_place(raw_data)
-    transformers = _get_transformers(cleaned_data)
-    features, labels = _transform_data(cleaned_data, transformers)
-
-    traindata, testdata, trainlabels, testlabels = train_test_split(
-        features, labels, test_size=0.2, stratify=labels
-    )
-
-    path = Path(training_params_filepath)
-    if path.exists():
-        current_params = json.loads(path.read_text())
-    else:
-        current_params = {}
+    frac = config["data_sample_fraction"]
 
     def objective(trial) -> float:
         new_params = {k: v(trial) for k, v in params_to_tune.items()}
-        study_params = current_params | new_params
-        model = xgboost.XGBClassifier(**study_params)
-        model.fit(traindata, trainlabels)
-        return float(model.score(testdata, testlabels))
+        result = train(new_params, frac)
+        return result
 
     study = optuna.create_study(direction="maximize")
     study.optimize(objective, n_trials=config["n_trials"], n_jobs=config["n_jobs"])  # type: ignore
 
-    new_params_dict = current_params | study.best_params
-
-    with open(training_params_filepath, "w") as f:
-        json.dump(new_params_dict, f, indent=2)
+    _write_new_params_to_file(study.best_params)
 
 
 def tune() -> None:
