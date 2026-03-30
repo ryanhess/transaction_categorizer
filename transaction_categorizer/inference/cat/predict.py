@@ -6,13 +6,12 @@ from xgboost.core import XGBoostError
 from scipy.sparse import hstack, csr_matrix, coo_array
 from typing import cast
 
-# this loading is done at import time. Makes predictions fast and initial load simple.
-# Don't want to load for each prediction.
+# top level def makes model loading happen at server startup
 try:
     _MODEL = XGBClassifier()
     _MODEL.load_model(model_filepath)
-    _PAYEE_VECTORIZER = joblib_load(str(payee_vectorizer_filepath))
-    _LABEL_ENCODER = joblib_load(str(label_encoder_filepath))
+    _PAYEE_VECTORIZER = joblib_load(payee_vectorizer_filepath)
+    _LABEL_ENCODER = joblib_load(label_encoder_filepath)
     MODEL_IS_TRAINED = True
 except (XGBoostError, FileNotFoundError):
     MODEL_IS_TRAINED = False
