@@ -6,7 +6,7 @@ from sklearn.preprocessing import LabelEncoder
 from scipy.sparse import hstack, coo_matrix
 from joblib import dump
 from numpy.typing import ArrayLike
-from typing import cast, Any
+from typing import cast
 import optuna
 import json
 from pathlib import Path
@@ -116,15 +116,15 @@ def train() -> float:
     transformers = _get_transformers(cleaned_data)
     features, labels = _transform_data(cleaned_data, transformers)
 
+    traindata, testdata, trainlabels, testlabels = train_test_split(
+        features, labels, test_size=0.2, stratify=labels
+    )
+
     params_path = Path(training_params_filepath)
     if params_path.exists():
         params = json.loads(params_path.read_text())
     else:
         params = {}
-
-    traindata, testdata, trainlabels, testlabels = train_test_split(
-        features, labels, test_size=0.2, stratify=labels
-    )
 
     model = xgboost.XGBClassifier(**params)
     model.fit(traindata, trainlabels)
@@ -139,15 +139,13 @@ def train() -> float:
 
 
 def _tune_specific_params(config: dict, params_to_tune: dict = {}) -> None:
-    raw = pd.read_csv(training_data_filepath)
-    raw = raw.sample(frac=config["data_sample_fraction"], random_state=42)
-
-    data, labels, payee_vectorizer, label_encoder = _clean_data_and_get_transformers(
-        raw
-    )
+    raw_data = _read_csv_training_data()
+    cleaned_data = _clean_data_in_place(raw_data)
+    transformers = _get_transformers(cleaned_data)
+    features, labels = _transform_data(cleaned_data, transformers)
 
     traindata, testdata, trainlabels, testlabels = train_test_split(
-        data, labels, test_size=0.2, stratify=labels
+        features, labels, test_size=0.2, stratify=labels
     )
 
     path = Path(training_params_filepath)
