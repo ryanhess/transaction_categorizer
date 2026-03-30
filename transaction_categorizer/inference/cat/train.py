@@ -53,6 +53,11 @@ def _clean_data_and_get_transformers(
 
 def train() -> float:
     raw = pd.read_csv(path_to_training_data)
+    params_path = Path(path_to_hyperparams)
+    if params_path.exists():
+        params = json.loads(params_path.read_text())
+    else:
+        params = {}
 
     data, labels, payee_vectorizer, label_encoder = _clean_data_and_get_transformers(
         raw
@@ -62,7 +67,7 @@ def train() -> float:
         data, labels, test_size=0.2, stratify=labels
     )
 
-    model = xgboost.XGBClassifier()
+    model = xgboost.XGBClassifier(**params)
     model.fit(traindata, trainlabels)
 
     model.save_model(path_to_model_state + "model.json")
