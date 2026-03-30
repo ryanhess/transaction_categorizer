@@ -8,3 +8,6 @@ clean:
 
 train:
 	@python -c "from transaction_categorizer.inference.cat.train import train; print(train())"
+
+tune:
+	@python -c "from transaction_categorizer.inference.cat.train import tune; tune()"
