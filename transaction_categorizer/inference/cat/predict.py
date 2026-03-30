@@ -2,18 +2,21 @@ from transaction_categorizer.models import TransactionRequest, TransactionRespon
 from .paths import model_filepath, payee_vectorizer_filepath, label_encoder_filepath
 from joblib import load as joblib_load
 from xgboost import XGBClassifier
-from xgboost.core import XGBoostError
 from scipy.sparse import hstack, csr_matrix, coo_array
 from typing import cast
 
 # top level def makes model loading happen at server startup
-try:
+if (
+    model_filepath.exists()
+    and payee_vectorizer_filepath.exists()
+    and label_encoder_filepath.exists()
+):
+    MODEL_IS_TRAINED = True
     _MODEL = XGBClassifier()
     _MODEL.load_model(model_filepath)
     _PAYEE_VECTORIZER = joblib_load(payee_vectorizer_filepath)
     _LABEL_ENCODER = joblib_load(label_encoder_filepath)
-    MODEL_IS_TRAINED = True
-except (XGBoostError, FileNotFoundError):
+else:
     MODEL_IS_TRAINED = False
 
 
