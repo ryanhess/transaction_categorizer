@@ -19,26 +19,61 @@ from .paths import (
 )
 
 
+def _clean_data_in_place(csvdata) -> pd.DataFrame:
+    """
+    Cleans the data, modifying the argument.
+    Returns a reference to the cleaned data as a convenience
+    """
+    # find rows where the payee starts with transfer, put Transfer in the category.
+    csvdata.loc[
+        csvdata["Payee"].str.startswith("Transfer :"), "Category Group/Category"
+    ] = "Transfer"
+
+    csvdata["Payee"] = csvdata["Payee"].fillna("")
+    csvdata["Category Group/Category"] = csvdata["Category Group/Category"].fillna(
+        "Uncategorized"
+    )
+    counts = csvdata["Category Group/Category"].value_counts()
+    keep = counts[counts >= 2].index
+    csvdata = csvdata[csvdata["Category Group/Category"].isin(keep)]
+    csvdata["Outflow"] = (
+        csvdata["Outflow"].replace(r"[\$,]", "", regex=True).astype(float)
+    )
+    csvdata["Inflow"] = (
+        csvdata["Inflow"].replace(r"[\$,]", "", regex=True).astype(float)
+    )
+
+    return csvdata
+
+
 def _clean_data_and_get_transformers(
     data,
 ) -> tuple[coo_matrix, ArrayLike, TfidfVectorizer, LabelEncoder]:
     # find rows where the payee starts with transfer, put Transfer in the category.
-    data.loc[data["Payee"].str.startswith("Transfer :"), "Category Group/Category"] = (
-        "Transfer"
-    )
-
-    data["Payee"] = data["Payee"].fillna("")
-    data["Category Group/Category"] = data["Category Group/Category"].fillna(
-        "Uncategorized"
-    )
-    counts = data["Category Group/Category"].value_counts()
-    keep = counts[counts >= 2].index
-    data = data[data["Category Group/Category"].isin(keep)]
+    data.loc[
+        data["Payee"].str.startswith("Transfer :"), "Category Group/Category"
+    ] = (  # Extracted
+        "Transfer"  # Extracted
+    )  # Extracted
+    # Extracted
+    data["Payee"] = data["Payee"].fillna("")  # Extracted
+    data["Category Group/Category"] = data[
+        "Category Group/Category"
+    ].fillna(  # Extracted
+        "Uncategorized"  # Extracted
+    )  # Extracted
+    counts = data["Category Group/Category"].value_counts()  # Extracted
+    keep = counts[counts >= 2].index  # Extracted
+    data = data[data["Category Group/Category"].isin(keep)]  # Extracted
 
     payee_vectorizer = TfidfVectorizer()
     payee_features = payee_vectorizer.fit_transform(data["Payee"])
-    data["Outflow"] = data["Outflow"].replace(r"[\$,]", "", regex=True).astype(float)
-    data["Inflow"] = data["Inflow"].replace(r"[\$,]", "", regex=True).astype(float)
+    data["Outflow"] = (
+        data["Outflow"].replace(r"[\$,]", "", regex=True).astype(float)
+    )  # Extracted
+    data["Inflow"] = (
+        data["Inflow"].replace(r"[\$,]", "", regex=True).astype(float)
+    )  # Extracted
 
     money_features = data[["Outflow", "Inflow"]].values
 
