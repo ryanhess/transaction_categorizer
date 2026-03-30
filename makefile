@@ -11,3 +11,7 @@ train:
 
 tune:
 	@python -c "from transaction_categorizer.inference.cat.train import tune; tune()"
+
+rollback-training:
+	@git restore --staged transaction_categorizer/inference/cat/state && \
+	git restore transaction_categorizer/inference/cat/state
