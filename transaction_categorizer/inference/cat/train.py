@@ -73,7 +73,7 @@ def train() -> float:
 
 
 def _tune_specific_params(
-    data_sample_fraction: float = 0.05, params_to_tune: dict = {}
+    config: dict, data_sample_fraction: float = 0.05, params_to_tune: dict = {}
 ) -> None:
     raw = pd.read_csv(path_to_training_data)
     raw = raw.sample(frac=data_sample_fraction, random_state=42)
@@ -100,9 +100,42 @@ def _tune_specific_params(
         return float(model.score(testdata, testlabels))
 
     study = optuna.create_study(direction="maximize")
-    study.optimize(objective, n_trials=10, n_jobs=4)  # type: ignore
+    study.optimize(objective, n_trials=config["n_trials"], n_jobs=config["n_jobs"])  # type: ignore
 
     new_params_dict = current_params | study.best_params
 
     with open(path_to_hyperparams, "w") as f:
         json.dump(new_params_dict, f, indent=2)
+
+
+def tune(data_sample_fraction: float = 0.05) -> None:
+    # fmt: off
+    param_tuning_sequence = [
+        {
+            "n_estimators": lambda trial:
+                trial.suggest_int("n_estimators", 100, 1000),
+            "learning_rate": lambda trial:
+                trial.suggest_float("learning_rate", 0.01, 0.3, log=True),
+        },
+        {
+            "min_child_weight": lambda trial:
+                trial.suggest_int("min_child_weight", 1, 20),
+            "max_depth": lambda trial:
+                trial.suggest_int("max_depth", 2, 8),
+        },
+        {
+            "subsample": lambda trial:
+                trial.suggest_float("subsample", 0.5, 1.0),
+            "colsample_bytree": lambda trial:
+                trial.suggest_float("colsample_bytree", 0.2, 1.0),
+        },
+    ]
+    # fmt: on
+
+    config = {
+        "n_trials": 50,
+        "n_jobs": -1,
+    }
+
+    for group in param_tuning_sequence:
+        _tune_specific_params(config, data_sample_fraction, group)
