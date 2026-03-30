@@ -96,7 +96,7 @@ def tune(data_sample_fraction: float = 0.05) -> None:
         return float(model.score(testdata, testlabels))
 
     study = optuna.create_study(direction="maximize")
-    study.optimize(objective, n_trials=100)  # type: ignore
+    study.optimize(objective, n_trials=100, n_jobs=-1)  # type: ignore
 
     with open(path_to_model_state + "best_params.json", "w") as f:
         json.dump(study.best_params, f, indent=2)
