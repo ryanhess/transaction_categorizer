@@ -9,12 +9,14 @@ from numpy.typing import ArrayLike
 from typing import cast
 import optuna
 import json
+from pathlib import Path
 
 
 path_to_training_data = (
     "transaction_categorizer/inference/cat/training_data/ynab-rh-txns.csv"
 )
 path_to_model_state = "transaction_categorizer/inference/cat/state/"
+path_to_hyperparams = "transaction_categorizer/inference/cat/state/hyperparams.json"
 
 
 def _clean_data_and_get_transformers(
@@ -82,21 +84,31 @@ def tune(data_sample_fraction: float = 0.05) -> None:
         data, labels, test_size=0.2, stratify=labels
     )
 
+    path = Path(path_to_hyperparams)
+    if path.exists():
+        current_params = json.loads(path.read_text())
+    else:
+        current_params = {}
+
     def objective(trial) -> float:
-        params = {
+        new_params = {
             "n_estimators": trial.suggest_int("n_estimators", 100, 1000),
-            "max_depth": trial.suggest_int("max_depth", 2, 8),
             "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.3, log=True),
-            "min_child_weight": trial.suggest_int("min_child_weight", 1, 20),
-            "subsample": trial.suggest_float("subsample", 0.5, 1.0),
-            "colsample_bytree": trial.suggest_float("colsample_bytree", 0.2, 1.0),
+            # "min_child_weight": trial.suggest_int("min_child_weight", 1, 20),
+            # "max_depth": trial.suggest_int("max_depth", 2, 8),
+            # "subsample": trial.suggest_float("subsample", 0.5, 1.0),
+            # "colsample_bytree": trial.suggest_float("colsample_bytree", 0.2, 1.0),
         }
-        model = xgboost.XGBClassifier(**params)
+        study_params = current_params | new_params
+        print(study_params)
+        model = xgboost.XGBClassifier(**study_params)
         model.fit(traindata, trainlabels)
         return float(model.score(testdata, testlabels))
 
     study = optuna.create_study(direction="maximize")
-    study.optimize(objective, n_trials=100, n_jobs=-1)  # type: ignore
+    study.optimize(objective, n_trials=10, n_jobs=4)  # type: ignore
 
-    with open(path_to_model_state + "best_params.json", "w") as f:
-        json.dump(study.best_params, f, indent=2)
+    new_params_dict = current_params | study.best_params
+
+    with open(path_to_hyperparams, "w") as f:
+        json.dump(new_params_dict, f, indent=2)
